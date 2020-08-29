@@ -9,10 +9,18 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Repository Description
 
-There will typically be three files for each project; one will contain the code (**.R**), another will be markdown (**.Rmd**), and the last (**.md**) can be viewed directly in github. The (.md) file description includes the associated project description. This repository is meant to house collaborative data science projects for which multiple contributors have direct access.  
+This repository is meant to house collaborative data science projects for which multiple contributors have direct access. There will typically be one folder for each project with a list of collaborators in the README folder description.  
 
 
-## File Description
+## Folder Descriptions
+
+#### NYC Crime App
+This is a Shiny App designed to study crime within NYC; specifically how offense severity and frequency fluctuate given the time of day, the month of occurrence, and the region in which the offense took place.
+
+**Contributors:** 
+
+
+## File Descriptions
 
 #### README.rmd
 This file creates a README.md file for the repository.
