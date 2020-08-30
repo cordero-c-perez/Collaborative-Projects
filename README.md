@@ -16,7 +16,8 @@ This is a Shiny App designed to study crime within NYC; specifically how
 offense severity and frequency fluctuate given the time of day, the
 month of occurrence, and the region in which the offense took place.
 
-**Contributors:**
+**Contributors:** [cordero-c-perez](https://github.com/cordero-c-perez),
+[joshuargst](https://github.com/joshuargst)
 
 ## File Descriptions
 
