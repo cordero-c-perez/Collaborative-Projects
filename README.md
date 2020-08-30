@@ -10,7 +10,7 @@ README folder description.
 
 ## Folder Descriptions
 
-#### NYC Crime App
+#### NYC Crime App ([Go to App](https://cordero-c-perez.shinyapps.io/NYC_Crime_App))
 
 This is a Shiny App designed to study crime within NYC; specifically how
 offense severity and frequency fluctuate given the time of day, the
