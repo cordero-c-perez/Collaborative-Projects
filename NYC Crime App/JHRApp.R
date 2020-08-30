@@ -110,22 +110,37 @@ ui <-  navbarPage("NYC Crime App", theme = shinytheme("flatly"),
                                                      choices = sort(unique(dataset$`Offense Description`)),
                                                      selected = "GRAND LARCENY"),
                                          pickerInput(inputId = "ChosenMonthPg2",
-                                                     label = "select Month(s) of interest",
+                                                     label = "Select Month(s) of interest",
                                                      choices= month.abb,
                                                      selected =  month.abb,
                                                      options = list(`actions-box` = TRUE), multiple = T),
                                          pickerInput(inputId = "ChosenYearPg2",
-                                                     label = "select Year(s) of interest",
+                                                     label = "Select Year(s) of interest",
                                                      choices=sort(as.character(unique(dataset$Year))),
                                                      selected =sort(as.character(unique(dataset$Year))),
                                                      options = list(`actions-box` = TRUE), multiple = T),
                                          pickerInput(inputId = "ChosenTimePg2",
-                                                     label = "select Time(s) of interest",
+                                                     label = "Select Time(s) of interest",
                                                      choices=   sort(as.character(unique(dataset$Time))),
                                                      selected = sort(as.character(unique(dataset$Time))),
                                                      options = list(`actions-box` = TRUE), multiple = T),
+                                         
+                                         # add notes
                                          strong(span("Note:", style = "color:blue")),
-                                         p("The map may take a few seconds to load when option is selected.")
+                                         p("The map may take a few seconds to load when options are selected."),
+                                         br(),
+                                         
+                                         # add options
+                                         p(span("Additional Options:", style = "color:blue"), "Pin a Location"),
+                                         
+                                         # enter address to pin location on map
+                                         textInput(inputId = "enteredAddress", label = "Enter Address",
+                                                   placeholder = "Ex. 20 W 34th St, New York, NY 10001"),
+                                         
+                                         # check to proceed and pin the location
+                                         checkboxInput(inputId = "addMarker", label = "Add Marker to Map",
+                                                       value = FALSE)
+                                        
                                          
                            ), # sidebar panel end
                            
@@ -136,7 +151,6 @@ ui <-  navbarPage("NYC Crime App", theme = shinytheme("flatly"),
                                           status = "primary",
                                           solidHeader = TRUE,
                                           width = 8,
-                                          p("If no data exists for filter conditions selected, the map will not render"),
                                           
                                           # top 10 prob w/ crime
                                           leafletOutput('cpleth', width = 900, height = 550)
@@ -269,6 +283,7 @@ server <- shinyServer(function(input, output) {
   # leaflet precinct map
   output$cpleth <- renderLeaflet({
     
+    # create custom dataset based on inputs
     datasetsub<-
       dataset %>%  
       filter(Time %in% input$ChosenTimePg2) %>% 
@@ -279,21 +294,73 @@ server <- shinyServer(function(input, output) {
       filter(Offense.Description%in%input$ChosenOffensePg2) %>% 
       mutate(Precinct = as.character(Precinct))
     
+    # find lat and lon of entered address
+    georesult <- geo(input$enteredAddress)
     
-    my_spdf$Offensefreq<-datasetsub$Freq[match(my_spdf$precinct,datasetsub$Precinct)]
+    # match freq values to precincts in spatial dataframe
+    my_spdf$Offensefreq <- datasetsub$Freq[match(my_spdf$precinct,datasetsub$Precinct)]
     
-    colorpalette<- colorNumeric(palette = 'YlOrRd',domain = my_spdf@data$Offensefreq,na.color = 'transparent')
-    leaflet(my_spdf) %>% 
-      addPolygons(stroke = FALSE, smoothFactor = .3, fillOpacity = .6, 
+    # catch error thrown by domain issues in my_spdf$Offensefreq
+    validate(
+      
+      need(!is.null(input$ChosenMonthPg2), "A month is required to generate a frequency map."),
+      need(!is.null(input$ChosenTimePg2), "A time of day is required to generate a frequency map."),
+      need(!is.null(input$ChosenYearPg2), "A year is required to generate a frequency map.")
+      
+    )
+    
+    # set color palette according to custom dataset domain
+    colorpalette <- colorNumeric(palette = 'YlOrRd',domain = my_spdf@data$Offensefreq, na.color = 'transparent')
+    
+    # catch error thrown by selection yielding no results
+    validate(
+      
+      need(!length(datasetsub) == 0, "No data exists for the current selection. Please update the selection to render a new map.")
+      
+    )
+    
+    # generate map given the 'pin location' check box is not selected
+    if(!input$addMarker){
+    
+      # map construction excluding pinned location
+      leaflet(my_spdf) %>% 
+        addPolygons(stroke = FALSE, smoothFactor = .3, fillOpacity = .6, 
                   fillColor = ~colorpalette(Offensefreq), 
                   highlight = highlightOptions(weight = 5,
                                                fillOpacity = 0.4,
                                                bringToFront = TRUE),
                   label = paste0("Precinct: ", my_spdf$precinct,"\n",
                                  "Number of Incidents: ", my_spdf$Offensefreq))%>% 
-      addPolylines(stroke = TRUE, weight = 1, color = "darkblue") %>% 
-      addProviderTiles(providers$CartoDB.Positron) %>% 
-      addLegend(pal = colorpalette,values =~Offensefreq, title = "Frequency of Offenses", position = "topleft")
+        addPolylines(stroke = TRUE, weight = 1, color = "darkblue") %>% 
+        addProviderTiles(providers$CartoDB.Positron) %>% 
+        addLegend(pal = colorpalette,values =~Offensefreq, title = "Frequency of Offenses", position = "topleft")
+    }
+
+    # generate map given the check box is selected
+    else{
+      
+      # catch error thrown by user entering incorrect address format
+      validate(
+        
+        need(!is.na(georesult$lat), "Please enter a valid address")
+        
+      )
+
+      # map construction including pinned location
+      leaflet(my_spdf) %>%
+        addPolygons(stroke = FALSE, smoothFactor = .3, fillOpacity = .6,
+                    fillColor = ~colorpalette(Offensefreq),
+                    highlight = highlightOptions(weight = 5,
+                                                 fillOpacity = 0.4,
+                                                 bringToFront = TRUE),
+                    label = paste0("Precinct: ", my_spdf$precinct,"\n",
+                                   "Number of Incidents: ", my_spdf$Offensefreq))%>%
+        addPolylines(stroke = TRUE, weight = 1, color = "darkblue") %>%
+        addProviderTiles(providers$CartoDB.Positron) %>%
+        addLegend(pal = colorpalette,values =~Offensefreq, title = "Frequency of Offenses", position = "topleft") %>%
+        addAwesomeMarkers(lat = georesult$lat, lng = georesult$long, label = georesult$address)
+
+    }
     
   })
   
