@@ -16,6 +16,7 @@ nb_data <- read_csv("~/Documents/R/RProjects-Public/Collaborative-Projects-Data/
 ytd_data <- read_csv("~/Documents/R/RProjects-Public/Collaborative-Projects-Data/NYPD_Complaint_Data_YTD.csv",
                      col_names = TRUE) %>% select(c(1:35))
 
+# combine data into one large set
 nb_data <- as.data.frame(rbind(nb_data,ytd_data))
 
 my_spdf <- readOGR("~/Documents/R/RProjects-Public/Collaborative-Projects-Data/Police Precincts.geojson")
@@ -99,8 +100,8 @@ nb_data <- nb_data %>%
 nb_data <- nb_data %>% mutate(`Offense Description` = offdesc2) %>% select(-c("offdesc2")) %>% 
   droplevels()
 
-# filter to appropriate timeframe
-nb_data <- nb_data %>% filter(Year %in% c("2015","2016","2017","2018","2019","2020")) %>% droplevels()
+# filter to appropriate time frame
+nb_data <- nb_data %>% filter(Year %in% c("2016","2017","2018","2019","2020")) %>% droplevels()
 
 
 ################################# DATA CHECK AFTER PRE-PROCESSING ######################################
@@ -110,71 +111,13 @@ view(head(nb_data, n = 20))
 str(nb_data)
 
 # saved data files for shiny app
-saveRDS(nb_models_list, file = "datamodels.rds") 
 saveRDS(nb_data[,3:11], file = "nbdata.rds") # main Data for app
 saveRDS(my_spdf, file = "spdf.rds") # spatial data for app
 
 # export the dataset
 write_csv(nb_data,"~/Documents/R/RProjects-Public/Machine-Learning-Data/cleaned_nb_data.csv")
 
-################################### Test: NAIVE BAYES ###############################################
 
-# # restrict the time frame
-# nb_data_list <- list(c(1:6))
-# nb_data_list[[1]] <- nb_data %>% filter(Date >= "2015-01-01" & Date <= "2015-12-31") %>% droplevels()
-# nb_data_list[[2]] <- nb_data %>% filter(Date >= "2016-01-01" & Date <= "2016-12-31") %>% droplevels()
-# nb_data_list[[3]] <- nb_data %>% filter(Date >= "2017-01-01" & Date <= "2017-12-31") %>% droplevels()
-# nb_data_list[[4]] <- nb_data %>% filter(Date >= "2018-01-01" & Date <= "2018-12-31") %>% droplevels()
-# nb_data_list[[5]] <- nb_data %>% filter(Date >= "2019-01-01" & Date <= "2019-12-31") %>% droplevels()
-# nb_data_list[[6]] <- nb_data %>% filter(Date >= "2020-01-01" & Date <= "2020-12-31") %>% droplevels()
-
-
-################################### NAIVE BAYES - (exclude) ###############################################
-# # build model for each year probabilities
-# # Run the naive bayes model: Crime Category ~ 
-# nb_models_list <- list(c(1:6))
-# 
-# for (i in 1:6){
-# nb_models_list[[i]] <- naive_bayes(formula = `Offense Description` ~ Precinct+Month+Time, 
-#                               data = nb_data_list[[i]], laplace = 1)
-# }
-# 
-# # saved data files for shiny app
-# saveRDS(nb_models_list, file = "datamodels.rds")
-# saveRDS(nb_data[,3:11], file = "nbdata.rds")
-# saveRDS(my_spdf, file = "spdf.rds")
-# 
-# 
-# prior_probs <- c()
-# for (i in 1:5){
-#   prior_probs <- rbind(prior_probs,nb_models_list[[i]]$prior)
-# }
-# 
-# # create data frame
-# prior_probs <- as.data.frame(cbind(Year = c(2015:2019), prior_probs))
-# prior_probs$Year <- as.factor(prior_probs$Year)
-# prior_probs <- gather(data = prior_probs, key = `Crime Category`, value = "Probability",-Year)
-# 
-# 
-# ########################################## Notes
-# 
-# # construct test data frame
-# 
-# test_df <- nb_data[23000,c(3,10:11)]
-# colnames(test_df) <- c("Precinct", "Month", "Time")
-# 
-# 
-# # Make prediction given NB model
-# output <- predict(nb_models_list[[3]], newdata =  test_df, type = "prob")
-# 
-# tester <- as.data.frame(cbind(dimnames(output)[[2]],output[1,]))
-# rownames(tester) <- NULL
-# names(tester) <- c("Offense Description", "Probability")
-# tester$Probability <- as.numeric(tester$Probability)
-# tester <- tester %>% arrange(desc(Probability))
-# 
-# 
-# nb_multi_model
 
 
 
