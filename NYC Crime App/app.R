@@ -28,6 +28,43 @@ my_spdf <- readRDS("spdf.rds")
 # create the page
 ui <-  navbarPage("NYC Crime App", theme = shinytheme("flatly"),
                   
+                  tabPanel("App Description",
+                           
+                           # introduction main panel
+                           mainPanel(width = 8,
+                                      
+                                     # purpose
+                                     span("Purpose: ", style = "color:blue"),
+                                     p("Created to explore how offense severity and frequency fluctuate given the time of day, 
+                                        the month of occurrence, and the region in which the offense took place."),
+                                     br(),
+                                     h4("Crime Breakdown Tab"),
+                                     br(),
+                                     span("Most Frequent Offense (& top 10): ", style = "color:blue"),
+                                     p("Calculates and prints the most frequent offense(s) to occur given the selection made."),
+                                     br(),
+                                     span("Citywide Frequency Summary: ", style = "color:blue"),
+                                     p("Calculates and prints summary statistics for the most frequent offense for all precincts
+                                       given the selection made. This is useful to see where the precinct(s) chosen fall stats-wise
+                                       when compared to all precincts as a whole."),
+                                     br(),
+                                     span("Year-Over-Year Chart: ", style = "color:blue"),
+                                     p("Visual comparison of offense frequency over time given the selection made."),
+                                     br(),
+                                     h4("Find My Precinct Tab"),
+                                     br(),
+                                     span("Precinct Map: ", style = "color:blue"),
+                                     p("A map that displays the raw value totals of selected offenses rather than rates. There is an 
+                                     option to enter an address and pin the location to find the precinct(s) of interest. Also, the ability 
+                                     to pin markers for individual complaints was not included as coordinate data is adjusted for many reasons.
+                                     So to maintain the highest accuracy, complaints are aggregated at the precinct level. ")
+                                     
+                                     
+                                      
+                           ) # main panel end
+                           
+                  ), # tabPanel end
+                  
                   tabPanel("Crime Breakdown",
                            
                            sidebarPanel(width = 2,
@@ -68,7 +105,7 @@ ui <-  navbarPage("NYC Crime App", theme = shinytheme("flatly"),
                                                     selected =  levels(dataset$Precinct)[5],
                                                     options = list(`actions-box` = TRUE), multiple = T),
                                         strong(span("Note:", style = "color:blue")),
-                                        p('Use the ', span("Information & Precinct Map", style = "color:blue"), 
+                                        p('Use the ', span("Find My Precinct", style = "color:blue"), 
                                           " tab to identify the relevant precinct based on address")
                                         
                                         
@@ -77,18 +114,19 @@ ui <-  navbarPage("NYC Crime App", theme = shinytheme("flatly"),
                            mainPanel(width = 10,
                                      
                                      # view prediction output
-                                     box(title = c("Most Frequent & Top 10"),
+                                     box(title = str_to_title("most frequent offense"),
                                          status = "primary",
                                          solidHeader = TRUE,
                                          width = 4,
                                          
                                          # prediction output
-                                         span(tableOutput('mostfrequent'), style="color:red")
+                                         span(textOutput('mostfrequent'), style="color:red"),
+                                         span(h6("(top 10 below)"), style = "color:blue")
                                          
                                      ),
                                      
                                      # current selection
-                                     box(title = str_to_title("citywide summary: most frequent offense"),
+                                     box(title = str_to_title("citywide frequency summary"),
                                          status = "primary",
                                          solidHeader = TRUE,
                                          width = 8,
@@ -122,7 +160,7 @@ ui <-  navbarPage("NYC Crime App", theme = shinytheme("flatly"),
                            ) # main panel end
                   ), # tabPanel end
                   
-                  tabPanel("Information & Precinct Map",
+                  tabPanel("Find My Precinct",
                            
                            sidebarPanel( width = 4,
                                          
@@ -233,7 +271,7 @@ server <- shinyServer(function(input, output) {
     
     cctable <- data.frame(rbind(c(1:6)))
     names(cctable) <- names(summary(displaydata2$Frequency))
-    cctable[1,] <-  summary_vec
+    cctable[1,] <-  round(summary_vec)
     
     cctable %>% 
       knitr::kable("html") %>%
@@ -242,23 +280,25 @@ server <- shinyServer(function(input, output) {
   }
   
   # set reactive output to identify most frequent
-  output$mostfrequent <- renderTable({
+  output$mostfrequent <- renderText({
     
-    if (sum(input$chosenMonth %in% c("Oct", "Nov", "Dec")) == length(input$chosenMonth)  &  input$chosenYear == "2020"){
-
-      xname <- c("Warning:")
-      xvalue1 <- c("Data is complete through Sepetember 30th, 2020.")
-      error_df <- as.data.frame(xvalue1)
-      names(error_df) <- xname
-
-      print(error_df)
-    }
-
-    else{ # start of main else
+    # if (sum(input$chosenMonth %in% c("Oct", "Nov", "Dec")) == length(input$chosenMonth)  &  input$chosenYear == "2020"){
+    # 
+    #   xname <- c("Warning: ")
+    #   xvalue1 <- c("Data is complete through Sepetember 30th, 2020.")
+    #   error_df <- as.data.frame(xvalue1)
+    #   names(error_df) <- xname
+    # 
+    #   outputargs = "Warning: Data is complete through Sepetember 30th, 2020."
+    # }
+    # 
+    # else{ # start of main else
       
       # catch errors
       validate(
 
+        need(!(sum(input$chosenMonth %in% c("Oct", "Nov", "Dec")) == length(input$chosenMonth)  &  input$chosenYear == "2020"),
+             "Warning: Data is complete through Sepetember 30th, 2020."),
         need(length(input$chosenMonth) != 0, "A month is required to calculate frequency."),
         need(length(input$chosenTime) != 0, "A time of day is required to calculate frequency."),
         need(length(input$chosenYear) != 0, "A year is required to calculate frequency."),
@@ -275,9 +315,9 @@ server <- shinyServer(function(input, output) {
         summarize(Frequency = n(),Percentage = Frequency/nrow(ydata)) %>% 
         arrange(desc(Percentage))
       
-      print(displaydata[1,1])
+      outputargs = as.character(displaydata[1,1])
       
-    } # end of main else
+    # } # end of main else
     
   })
   
@@ -286,8 +326,8 @@ server <- shinyServer(function(input, output) {
     
     if (sum(input$chosenMonth %in% c("Oct", "Nov", "Dec")) == length(input$chosenMonth)  &  input$chosenYear == "2020"){
 
-      xname <- c(" ")
-      xvalue1 <- c("Any selection that inclused data beyond 9/30/2020 will not contirbute to totals and percentages.")
+      xname <- c("Note:")
+      xvalue1 <- c("Any selection that includes data beyond 9/30/2020 will not contribute to totals and percentages.")
       error_df <- as.data.frame(xvalue1)
       names(error_df) <- xname
 
