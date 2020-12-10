@@ -11,6 +11,10 @@ This repository houses collaborative data science projects for which multiple co
 
 &nbsp;  
 
+![](gh_image.png) 
+
+&nbsp;  
+
 ### Folder Descriptions
 ***
 
